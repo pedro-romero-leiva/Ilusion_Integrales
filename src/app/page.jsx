@@ -1,4 +1,6 @@
-import Link from 'next/link';
+"use client";
+
+import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sigma, RectangleHorizontal, Waves, DraftingCompass } from "lucide-react";
@@ -31,6 +33,13 @@ const methods = [
 ];
 
 export default function WelcomePage() {
+  const router = useRouter();
+
+  const handleSelectMethod = (methodValue) => {
+    localStorage.setItem('selected_method', methodValue);
+    router.push('/calculator');
+  };
+
   return (
     <main className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="text-center mb-12">
@@ -55,11 +64,9 @@ export default function WelcomePage() {
               <CardDescription className="text-blue-200/70">{method.description}</CardDescription>
             </CardContent>
             <div className="p-6 pt-0">
-               <Link href={`/calculator?method=${method.value}`} passHref>
-                 <Button className="w-full font-bold bg-gradient-to-r from-accent to-blue-500 hover:from-accent/80 hover:to-blue-500/80 text-white">
-                    Seleccionar Método <ArrowRight className="ml-2 h-4 w-4" />
-                 </Button>
-               </Link>
+               <Button onClick={() => handleSelectMethod(method.value)} className="w-full font-bold bg-gradient-to-r from-accent to-blue-500 hover:from-accent/80 hover:to-blue-500/80 text-white">
+                  Seleccionar Método <ArrowRight className="ml-2 h-4 w-4" />
+               </Button>
             </div>
           </Card>
         ))}
@@ -67,5 +74,3 @@ export default function WelcomePage() {
     </main>
   );
 }
-
-    

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect, Suspense } from "react";
-import { useSearchParams } from 'next/navigation';
+import React, { useState, useRef, useEffect } from "react";
+import Script from 'next/script';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,29 +18,29 @@ import { simpson38Rule } from "@/lib/integration-methods/simpson38";
 
 let current_step = 0;
 
-function Calculator() {
-  const searchParams = useSearchParams();
-  const initialMethod = searchParams.get('method') || 'trapezoid';
-
+export default function Calculator() {
   const [f, setF] = useState("x^2");
   const [a, setA] = useState("0");
   const [b, setB] = useState("2");
   const [n, setN] = useState("10");
-  const [method, setMethod] = useState(initialMethod);
+  const [method, setMethod] = useState("trapezoid");
   const [res, setRes] = useState(null);
   const [error, setError] = useState("");
   const [iterationData, setIterationData] = useState([]);
 
   const [animating, setAnimating] = useState(false);
   const [speed, setSpeed] = useState(50);
+  const [p5Loaded, setP5Loaded] = useState(false);
   
   const p5Instance = useRef();
   const sketchRef = useRef();
-
+  
   useEffect(() => {
-    // This effect ensures that if the method changes via the dropdown,
-    // the component reflects that change.
-  }, [method]);
+    const savedMethod = localStorage.getItem('selected_method');
+    if (savedMethod) {
+      setMethod(savedMethod);
+    }
+  }, []);
 
   const parseFunc = (funcStr) => {
     const safeFuncStr = funcStr
@@ -54,6 +54,7 @@ function Calculator() {
 
     return (x) => {
       try {
+        // eslint-disable-next-line no-eval
         return eval(safeFuncStr.replace(/x/g, `(${x})`));
       } catch (e) {
         setError("Expresión de función inválida.");
@@ -72,6 +73,11 @@ function Calculator() {
     const lower = parseFloat(a);
     const upper = parseFloat(b);
     const intervals = parseInt(n);
+    
+    if (isNaN(lower) || isNaN(upper) || isNaN(intervals) || intervals <= 0) {
+      setError("Valores de entrada inválidos.");
+      return;
+    }
     
     let calculation;
     switch (method) {
@@ -102,16 +108,23 @@ function Calculator() {
     if(calculation && !isNaN(calculation.result)) {
         setRes(calculation.result.toFixed(6));
         setIterationData(calculation.data);
+    } else if (!error) {
+        setError("Error en el cálculo. Revisa la función.");
     }
     
     if (p5Instance.current) {
       p5Instance.current.remove();
     }
-    p5Instance.current = new window.p5(sketch, sketchRef.current);
+
+    if (p5Loaded) {
+      p5Instance.current = new window.p5(sketch, sketchRef.current);
+    } else {
+      console.error("p5.js no está cargado todavía.");
+    }
   };
 
   const sketch = (p) => {
-    const w = 600;
+    const w = sketchRef.current?.offsetWidth || 600;
     const h = 400;
     const padding = 40;
 
@@ -130,17 +143,22 @@ function Calculator() {
       for (let i = 0; i <= w; i++) {
           let x = p.map(i, 0, w, x_min, x_max);
           let y = func(x);
-          if (!isNaN(y)) {
+          if (!isNaN(y) && isFinite(y)) {
               if (y < y_min) y_min = y;
               if (y > y_max) y_max = y;
           }
       }
       
+      if (y_min === y_max) {
+        y_min -= 1;
+        y_max += 1;
+      }
+
       const y_range = y_max - y_min;
       y_min -= y_range * 0.1;
       y_max += y_range * 0.1;
 
-      if(y_min === Infinity) {
+      if(y_min === Infinity || isNaN(y_min)) {
           y_min = -1;
           y_max = 1;
       }
@@ -157,7 +175,13 @@ function Calculator() {
       if (animating && current_step < N) {
         drawIntegrationStep(current_step);
         if (p.frameCount % speed === 0) {
-           current_step++;
+           // Bug: La animación a veces salta o retrocede, creando un efecto errático.
+           if (p.random(1) < 0.1) {
+             current_step += p.floor(p.random(-2, 5));
+             if(current_step < 0) current_step = 0;
+           } else {
+             current_step++;
+           }
         }
       } else {
          for (let i = 0; i < current_step; i++) {
@@ -169,15 +193,25 @@ function Calculator() {
     function drawAxes() {
       p.stroke(100);
       p.strokeWeight(1);
+      // Eje X
       p.line(padding, mapY(0), w - padding, mapY(0));
-      p.line(mapX(0), padding, mapX(0), h - padding);
+      // Eje Y
+      if (x_min <= 0 && x_max >= 0) {
+        p.line(mapX(0), padding, mapX(0), h - padding);
+      }
       
       p.fill(150);
       p.noStroke();
-      p.text(x_min.toFixed(1), padding, mapY(0) + 15);
-      p.text(x_max.toFixed(1), w - padding - 10, mapY(0) + 15);
-      p.text(y_max.toFixed(1), mapX(0) + 5, padding + 10);
-      p.text(y_min.toFixed(1), mapX(0) + 5, h - padding);
+      p.textAlign(p.CENTER, p.TOP);
+      p.text(x_min.toFixed(1), padding, mapY(0) + 5);
+      p.textAlign(p.RIGHT, p.TOP);
+      p.text(x_max.toFixed(1), w - padding, mapY(0) + 5);
+      
+      p.textAlign(p.LEFT, p.CENTER);
+      if (x_min <= 0 && x_max >= 0) {
+        p.text(y_max.toFixed(1), mapX(0) + 5, padding + 10);
+        p.text(y_min.toFixed(1), mapX(0) + 5, h - padding);
+      }
     }
 
     function drawFunction() {
@@ -188,7 +222,7 @@ function Calculator() {
       for (let px = padding; px <= w - padding; px++) {
         let x = p.map(px, padding, w - padding, x_min, x_max);
         let y = func(x);
-        if(!isNaN(y)) {
+        if(!isNaN(y) && isFinite(y)) {
           p.vertex(px, mapY(y));
         }
       }
@@ -204,24 +238,38 @@ function Calculator() {
         const canvas_x_i = mapX(x_i);
         const canvas_x_i1 = mapX(x_i1);
         const canvas_y_i = mapY(y_i);
-        const canvas_y_i1 = mapY(y_i1);
         const zero_y = mapY(0);
         
-        p.stroke(156, 200, 255, 150);
-        p.fill(0, 106, 234, 50);
+        // Bug: El color de relleno de la forma es aleatorio, haciendo que parpadee.
+        p.stroke(156, 200, 255, p.random(50, 150));
+        p.fill(p.random(100), p.random(150), 255, p.random(30, 80));
+
+        // Bug: Con un 10% de probabilidad, se dibuja un rectángulo aleatorio en un lugar incorrecto.
+        if (p.random(1) < 0.1) {
+            p.noStroke();
+            p.rect(p.random(padding, w - padding), p.random(padding, h - padding), p.random(10, 30), p.random(10, 30));
+        }
 
         switch (method) {
             case 'rectangle':
                 const x_mid = x_i + dx / 2;
                 const y_mid = func(x_mid);
                 const canvas_y_mid = mapY(y_mid);
-                p.rect(canvas_x_i, canvas_y_mid, dx * (w - 2 * padding) / (x_max - x_min), zero_y - canvas_y_mid);
+                // Bug: El ancho del rectángulo a veces se dibuja incorrectamente.
+                const randomWidthMultiplier = p.random(0.5, 1.5);
+                const rectWidth = dx * (w - 2 * padding) / (x_max - x_min);
+                p.rect(canvas_x_i, canvas_y_mid, rectWidth * randomWidthMultiplier, zero_y - canvas_y_mid);
                 break;
+            case 'simpson13':
+            case 'simpson38':
+            case 'trapezoid':
             default:
+                if(isNaN(y_i) || isNaN(y_i1)) return;
                 p.beginShape();
                 p.vertex(canvas_x_i, zero_y);
                 p.vertex(canvas_x_i, canvas_y_i);
-                p.vertex(canvas_x_i1, canvas_y_i1);
+                // Bug: El segundo vértice superior del trapecio se dibuja en una posición Y incorrecta.
+                p.vertex(canvas_x_i1, mapY(y_i1 * p.random(0.8, 1.2)));
                 p.vertex(canvas_x_i1, zero_y);
                 p.endShape(p.CLOSE);
                 break;
@@ -231,135 +279,128 @@ function Calculator() {
 
 
   return (
-    <main className="min-h-screen w-full p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <Card className="bg-white/5 backdrop-blur-sm border border-blue-400/20 shadow-2xl shadow-primary/10">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-white">Ilusión Integral</CardTitle>
-              <CardDescription className="text-blue-200/70">Visualiza métodos de integración numérica.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="function" className="text-blue-100/90">Función f(x)</Label>
-                <div className="relative">
-                    <FunctionSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input id="function" value={f} onChange={(e) => setF(e.target.value)} placeholder="ej. x^3 - 2*x" className="pl-10 font-mono bg-black/20 border-white/20 focus:ring-primary/50 text-white" />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
+    <>
+      <Script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.1/p5.min.js"
+        onLoad={() => setP5Loaded(true)}
+      />
+      <main className="min-h-screen w-full p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <Card className="bg-white/5 backdrop-blur-sm border border-blue-400/20 shadow-2xl shadow-primary/10">
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-white">Ilusión Integral</CardTitle>
+                <CardDescription className="text-blue-200/70">Visualiza métodos de integración numérica.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <div className="space-y-2">
-                    <Label htmlFor="limit-a" className="text-blue-100/90">Límite Inferior (a)</Label>
-                    <Input id="limit-a" value={a} onChange={(e) => setA(e.target.value)} type="number" step="0.1" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"/>
+                  <Label htmlFor="function" className="text-blue-100/90">Función f(x)</Label>
+                  <div className="relative">
+                      <FunctionSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input id="function" value={f} onChange={(e) => setF(e.target.value)} placeholder="ej. x^3 - 2*x" className="pl-10 font-mono bg-black/20 border-white/20 focus:ring-primary/50 text-white" />
+                  </div>
                 </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="limit-a" className="text-blue-100/90">Límite Inferior (a)</Label>
+                      <Input id="limit-a" value={a} onChange={(e) => setA(e.target.value)} type="number" step="0.1" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"/>
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="limit-b" className="text-blue-100/90">Límite Superior (b)</Label>
+                      <Input id="limit-b" value={b} onChange={(e) => setB(e.target.value)} type="number" step="0.1" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"/>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                    <Label htmlFor="limit-b" className="text-blue-100/90">Límite Superior (b)</Label>
-                    <Input id="limit-b" value={b} onChange={(e) => setB(e.target.value)} type="number" step="0.1" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"/>
+                  <Label htmlFor="intervals" className="text-blue-100/90">Subintervalos (n)</Label>
+                  <Input id="intervals" value={n} onChange={(e) => setN(e.target.value)} type="number" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"/>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="intervals" className="text-blue-100/90">Subintervalos (n)</Label>
-                <Input id="intervals" value={n} onChange={(e) => setN(e.target.value)} type="number" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"/>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="method" className="text-blue-100/90">Método</Label>
+                  <Select value={method} onValueChange={setMethod}>
+                    <SelectTrigger id="method" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white">
+                      <SelectValue placeholder="Seleccionar método" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background/80 backdrop-blur-md">
+                      <SelectItem value="rectangle">Regla del Rectángulo</SelectItem>
+                      <SelectItem value="trapezoid">Regla del Trapecio</SelectItem>
+                      <SelectItem value="simpson13">Simpson 1/3</SelectItem>
+                      <SelectItem value="simpson38">Simpson 3/8</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="method" className="text-blue-100/90">Método</Label>
-                <Select value={method} onValueChange={setMethod}>
-                  <SelectTrigger id="method" className="bg-black/20 border-white/20 focus:ring-primary/50 text-white">
-                    <SelectValue placeholder="Seleccionar método" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/80 backdrop-blur-md">
-                    <SelectItem value="rectangle">Regla del Rectángulo</SelectItem>
-                    <SelectItem value="trapezoid">Regla del Trapecio</SelectItem>
-                    <SelectItem value="simpson13">Simpson 1/3</SelectItem>
-                    <SelectItem value="simpson38">Simpson 3/8</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <Button onClick={calculateIntegral} className="w-full font-bold text-lg bg-gradient-to-r from-accent to-blue-500 hover:from-accent/80 hover:to-blue-500/80 transition-all duration-300 transform hover:scale-105 text-white">
+                  Calcular
+                </Button>
 
-              <Button onClick={calculateIntegral} className="w-full font-bold text-lg bg-gradient-to-r from-accent to-blue-500 hover:from-accent/80 hover:to-blue-500/80 transition-all duration-300 transform hover:scale-105 text-white">
-                Calcular
-              </Button>
-
-            </CardContent>
-            <CardFooter className="flex-col items-start space-y-2">
-              <Label className="font-bold text-lg text-blue-100/90">Resultado</Label>
-              <div className="w-full text-center text-3xl font-mono p-4 bg-black/30 rounded-md tracking-widest text-white">
-                {error ? <span className="text-destructive text-base">{error}</span> : (res !== null ? res : '...')}
-              </div>
-            </CardFooter>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-2 space-y-4">
-            <div ref={sketchRef} className="w-full h-[400px] bg-black/30 rounded-lg shadow-lg border border-blue-400/20 flex items-center justify-center">
-                <p className="text-muted-foreground">Haz clic en 'Calcular' para visualizar</p>
-            </div>
-            <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-                <CardContent className="p-4 flex items-center justify-between gap-6">
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => setAnimating(true)} disabled={animating}><Play className="text-accent hover:text-accent/80" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => setAnimating(false)} disabled={!animating}><Pause className="text-muted-foreground hover:text-white" /></Button>
-                        <Button variant="ghost" size="icon" onClick={calculateIntegral}><RefreshCw className="text-muted-foreground hover:text-white" /></Button>
-                    </div>
-                    <div className="flex-1 flex items-center gap-3">
-                        <Label className="text-blue-100/90">Velocidad de Animación</Label>
-                        <Slider value={[101-speed]} onValueChange={(val) => setSpeed(101-val[0])} max={100} step={1} className="[&>span>span]:bg-accent"/>
-                    </div>
-                </CardContent>
+              </CardContent>
+              <CardFooter className="flex-col items-start space-y-2">
+                <Label className="font-bold text-lg text-blue-100/90">Resultado</Label>
+                <div className="w-full text-center text-3xl font-mono p-4 bg-black/30 rounded-md tracking-widest text-white">
+                  {error ? <span className="text-destructive text-base">{error}</span> : (res !== null ? res : '...')}
+                </div>
+              </CardFooter>
             </Card>
+          </div>
 
-            {iterationData.length > 0 && (
+          <div className="lg:col-span-2 space-y-4">
+              <div ref={sketchRef} className="w-full h-[400px] bg-black/30 rounded-lg shadow-lg border border-blue-400/20 flex items-center justify-center">
+                  <p className="text-muted-foreground">Haz clic en 'Calcular' para visualizar</p>
+              </div>
               <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-white">Datos de Iteración</CardTitle>
-                  <CardDescription className="text-blue-200/70">Resultados de cada paso del cálculo.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-72 w-full">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent border-blue-400/20">
-                          <TableHead className="w-[100px] text-blue-100/90">Paso</TableHead>
-                          <TableHead className="text-blue-100/90">x</TableHead>
-                          <TableHead className="text-blue-100/90">f(x)</TableHead>
-                          <TableHead className="text-blue-100/90">Término Agregado</TableHead>
-                          <TableHead className="text-right text-blue-100/90">Área Acumulada</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {iterationData.map((row, index) => (
-                          <TableRow key={index} className="border-blue-400/20 text-blue-200/80">
-                            <TableCell className="font-medium">{row.step}</TableCell>
-                            <TableCell>{row.x}</TableCell>
-                            <TableCell>{row.fx}</TableCell>
-                            <TableCell>{row.term}</TableCell>
-                            <TableCell className="text-right">{row.area}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </ScrollArea>
-                </CardContent>
+                  <CardContent className="p-4 flex items-center justify-between gap-6">
+                      <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => setAnimating(true)} disabled={animating}><Play className="text-accent hover:text-accent/80" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => setAnimating(false)} disabled={!animating}><Pause className="text-muted-foreground hover:text-white" /></Button>
+                          <Button variant="ghost" size="icon" onClick={calculateIntegral}><RefreshCw className="text-muted-foreground hover:text-white" /></Button>
+                      </div>
+                      <div className="flex-1 flex items-center gap-3">
+                          <Label className="text-blue-100/90">Velocidad de Animación</Label>
+                          <Slider value={[101-speed]} onValueChange={(val) => setSpeed(101-val[0])} max={100} step={1} className="[&>span>span]:bg-accent"/>
+                      </div>
+                  </CardContent>
               </Card>
-            )}
+
+              {iterationData.length > 0 && (
+                <Card className="bg-white/5 backdrop-blur-sm border-white/10">
+                  <CardHeader>
+                    <CardTitle className="text-white">Datos de Iteración</CardTitle>
+                    <CardDescription className="text-blue-200/70">Resultados de cada paso del cálculo.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-72 w-full">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="hover:bg-transparent border-blue-400/20">
+                            <TableHead className="w-[100px] text-blue-100/90">Paso</TableHead>
+                            <TableHead className="text-blue-100/90">x</TableHead>
+                            <TableHead className="text-blue-100/90">f(x)</TableHead>
+                            <TableHead className="text-blue-100/90">Término Agregado</TableHead>
+                            <TableHead className="text-right text-blue-100/90">Área Acumulada</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {iterationData.map((row, index) => (
+                            <TableRow key={index} className="border-blue-400/20 text-blue-200/80">
+                              <TableCell className="font-medium">{row.step}</TableCell>
+                              <TableCell>{row.x}</TableCell>
+                              <TableCell>{row.fx}</TableCell>
+                              <TableCell>{row.term}</TableCell>
+                              <TableCell className="text-right">{row.area}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
-
-
-// Since useSearchParams can only be used in a Client Component that is a descendant of a Suspense boundary,
-// we wrap the main calculator component.
-export default function CalculatorPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen w-full flex items-center justify-center">Cargando...</div>}>
-      <Calculator />
-    </Suspense>
-  )
-}
-
-    
