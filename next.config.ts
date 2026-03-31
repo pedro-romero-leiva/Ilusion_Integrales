@@ -1,6 +1,7 @@
 import type {NextConfig} from 'next';
 import path from 'path';
 
+//Parte Jafeth punto 3 resuelto
 const isProd = process.env.NODE_ENV === 'production';
 
 const nextConfig: NextConfig = {
@@ -10,7 +11,6 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  // Evita que Next infiera la raíz del monorepo por un package-lock en un directorio padre.
   outputFileTracingRoot: path.join(process.cwd()),
 };
 

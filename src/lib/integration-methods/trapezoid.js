@@ -1,6 +1,4 @@
-/**
- * Regla del trapecio compuesta: ∫[a,b] f ≈ Σ (h/2)[f(xᵢ)+f(xᵢ₊₁)], h=(b-a)/n.
- */
+//Parte Jafeth punto 6 resuelto
 export const trapezoidRule = (func, lower, upper, intervals) => {
   const h = (upper - lower) / intervals;
   const data = [];

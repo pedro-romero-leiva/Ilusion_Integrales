@@ -1,7 +1,4 @@
-/**
- * Regla de Simpson 1/3 compuesta: requiere n par, h=(b-a)/n,
- * ∫ ≈ (h/3)[f(x₀)+f(xₙ)+4Σ f(xᵢ impar)+2Σ f(xᵢ par)].
- */
+//Parte Jafeth punto 6 resuelto
 export const simpson13Rule = (func, lower, upper, intervals) => {
   if (intervals % 2 !== 0) {
     throw new Error("La regla de Simpson 1/3 requiere un número par de subintervalos.");

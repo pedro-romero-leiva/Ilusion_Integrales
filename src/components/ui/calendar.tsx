@@ -1,5 +1,7 @@
 "use client"
 
+//Parte Jafeth punto 3 resuelto
+
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { DayPicker } from "react-day-picker"

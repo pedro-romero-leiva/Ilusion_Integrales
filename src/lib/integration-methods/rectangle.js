@@ -1,6 +1,4 @@
-/**
- * Regla del rectángulo (punto medio): ∫[a,b] f ≈ h Σ f(a + (i+½)h), h=(b-a)/n, i=0..n-1.
- */
+//Parte Jafeth punto 6 resuelto
 export const rectangleRule = (func, lower, upper, intervals) => {
   const h = (upper - lower) / intervals;
   let sum = 0;

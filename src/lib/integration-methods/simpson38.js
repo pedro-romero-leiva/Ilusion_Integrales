@@ -1,7 +1,4 @@
-/**
- * Regla de Simpson 3/8 compuesta: n múltiplo de 3, h=(b-a)/n, m=n/3 paneles.
- * Cada panel: (3h/8)(f₃ₖ + 3f₃ₖ₊₁ + 3f₃ₖ₊₂ + f₃ₖ₊₃).
- */
+//Parte Jafeth punto 6 resuelto
 export const simpson38Rule = (func, lower, upper, intervals) => {
   if (intervals % 3 !== 0) {
     throw new Error(

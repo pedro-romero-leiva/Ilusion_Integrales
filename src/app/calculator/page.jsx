@@ -1,6 +1,10 @@
 "use client";
 
+//Parte Jafeth punto 7 resuelto
+//Parte Jafeth punto 8 resuelto
+
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import Link from "next/link";
 import Script from "next/script";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,13 +17,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -30,13 +27,65 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Play, Pause, RefreshCw, FunctionSquare } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Play,
+  Pause,
+  RefreshCw,
+  FunctionSquare,
+  RectangleHorizontal,
+  Waves,
+  Sigma,
+  DraftingCompass,
+  Sparkles,
+  Hash,
+  Repeat,
+  Gauge,
+  Percent,
+  ArrowLeft,
+  Table2,
+} from "lucide-react";
 import { parseExpression } from "@/lib/safe-expression";
 import { rectangleRule } from "@/lib/integration-methods/rectangle";
 import { trapezoidRule } from "@/lib/integration-methods/trapezoid";
 import { simpson13Rule } from "@/lib/integration-methods/simpson13";
 import { simpson38Rule } from "@/lib/integration-methods/simpson38";
 import { referenceIntegralSimpson13 } from "@/lib/integration-methods/reference-simpson13";
+
+const INTEGRATION_METHODS = [
+  {
+    value: "rectangle",
+    label: "Rectángulo",
+    subtitle: "Punto medio",
+    description: "Área con altura f(x) en el centro de cada subintervalo.",
+    constraint: "n ≥ 1",
+    Icon: RectangleHorizontal,
+  },
+  {
+    value: "trapezoid",
+    label: "Trapecio",
+    subtitle: "Compuesta",
+    description: "Une puntos con segmentos; suma de áreas trapezoidales.",
+    constraint: "n ≥ 1",
+    Icon: Waves,
+  },
+  {
+    value: "simpson13",
+    label: "Simpson 1/3",
+    subtitle: "Parábolas",
+    description: "Pesos 1, 4, 2, … en nodos; muy preciso si f es suave.",
+    constraint: "n par",
+    Icon: Sigma,
+  },
+  {
+    value: "simpson38",
+    label: "Simpson 3/8",
+    subtitle: "Cubicos",
+    description: "Bloques de tres subintervalos; coeficientes 1, 3, 3, 1.",
+    constraint: "n múltiplo de 3",
+    Icon: DraftingCompass,
+  },
+];
 
 export default function Calculator() {
   const [f, setF] = useState("x^2");
@@ -371,156 +420,248 @@ export default function Calculator() {
         onLoad={() => setP5Loaded(true)}
       />
       <main className="min-h-screen w-full p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="mx-auto max-w-7xl">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-blue-200/70 hover:text-primary transition-colors mb-6 group"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            Volver a métodos
+          </Link>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1">
-            <Card className="bg-white/5 backdrop-blur-sm border border-blue-400/20 shadow-2xl shadow-primary/10">
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-white">
-                  Ilusión Integral
-                </CardTitle>
-                <CardDescription className="text-blue-200/70">
-                  Integración numérica con error relativo respecto a una referencia de alta precisión.
-                </CardDescription>
+            <Card className="overflow-hidden bg-white/5 backdrop-blur-md border border-blue-400/25 shadow-2xl shadow-primary/15 ring-1 ring-white/5">
+              <div className="h-1 bg-gradient-to-r from-accent via-blue-400 to-primary opacity-90" aria-hidden />
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-6 w-6 text-primary shrink-0" />
+                  <div>
+                    <CardTitle className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-white">
+                      Ilusión Integral
+                    </CardTitle>
+                    <CardDescription className="text-blue-200/75 mt-1">
+                      Parámetros, método numérico y métricas del aproximado.
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="function" className="text-blue-100/90">
-                    Función f(x)
-                  </Label>
-                  <div className="relative">
-                    <FunctionSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <CardContent className="space-y-8">
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-blue-400/15 pb-2">
+                    <FunctionSquare className="h-4 w-4 text-accent" />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-blue-200/60">
+                      Integrando y dominio
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="function" className="text-blue-100/90">
+                      Función f(x)
+                    </Label>
+                    <div className="relative">
+                      <FunctionSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                      <Input
+                        id="function"
+                        value={f}
+                        onChange={(e) => setF(e.target.value)}
+                        placeholder="ej. x^3 - 2*x, sin(x), exp(x)"
+                        className="pl-10 font-mono bg-black/30 border-white/15 focus-visible:ring-accent/40 text-white placeholder:text-blue-300/35 rounded-lg"
+                      />
+                    </div>
+                    <p className="text-xs text-blue-200/45 leading-relaxed">
+                      Variable <span className="text-blue-200/70">x</span>; operadores + − * / ^; sin, cos, tan, exp, log, sqrt, abs…
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="limit-a" className="text-blue-100/90 text-xs">
+                        a (inferior)
+                      </Label>
+                      <Input
+                        id="limit-a"
+                        value={a}
+                        onChange={(e) => setA(e.target.value)}
+                        type="number"
+                        step="0.1"
+                        className="bg-black/30 border-white/15 focus-visible:ring-accent/40 text-white rounded-lg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="limit-b" className="text-blue-100/90 text-xs">
+                        b (superior)
+                      </Label>
+                      <Input
+                        id="limit-b"
+                        value={b}
+                        onChange={(e) => setB(e.target.value)}
+                        type="number"
+                        step="0.1"
+                        className="bg-black/30 border-white/15 focus-visible:ring-accent/40 text-white rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="intervals" className="text-blue-100/90 flex items-center gap-2">
+                      <Hash className="h-3.5 w-3.5 text-accent" />
+                      Subintervalos (n)
+                    </Label>
                     <Input
-                      id="function"
-                      value={f}
-                      onChange={(e) => setF(e.target.value)}
-                      placeholder="ej. x^3 - 2*x, sin(x), exp(x)"
-                      className="pl-10 font-mono bg-black/20 border-white/20 focus:ring-primary/50 text-white"
+                      id="intervals"
+                      value={n}
+                      onChange={(e) => setN(e.target.value)}
+                      type="number"
+                      className="bg-black/30 border-white/15 focus-visible:ring-accent/40 text-white rounded-lg"
                     />
                   </div>
-                  <p className="text-xs text-blue-200/50">
-                    Variable x; operadores + − * / ^; funciones sin, cos, tan, exp, log, sqrt, abs…
+                </section>
+
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-blue-400/15 pb-2">
+                    <Sigma className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-blue-200/60">
+                      Método de integración
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-200/50 -mt-2">
+                    Misma estética que la portada: elige una tarjeta. Debe cumplirse la condición sobre{" "}
+                    <span className="text-blue-200/80 font-mono">n</span>.
                   </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="limit-a" className="text-blue-100/90">
-                      Límite inferior (a)
-                    </Label>
-                    <Input
-                      id="limit-a"
-                      value={a}
-                      onChange={(e) => setA(e.target.value)}
-                      type="number"
-                      step="0.1"
-                      className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"
-                    />
+                  <div
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                    role="radiogroup"
+                    aria-label="Método de integración numérica"
+                  >
+                    {INTEGRATION_METHODS.map((m) => {
+                      const selected = method === m.value;
+                      const Icon = m.Icon;
+                      return (
+                        <button
+                          key={m.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => setMethod(m.value)}
+                          className={cn(
+                            "text-left rounded-xl border p-3.5 transition-all duration-300 outline-none",
+                            "bg-black/20 backdrop-blur-sm hover:border-accent/40 hover:bg-white/[0.04]",
+                            "focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(222,84%,8%)]",
+                            selected
+                              ? "border-accent/70 shadow-lg shadow-accent/10 ring-1 ring-accent/25 scale-[1.02]"
+                              : "border-blue-400/20"
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div
+                              className={cn(
+                                "rounded-lg p-2 shrink-0 transition-colors",
+                                selected
+                                  ? "bg-accent/20 text-primary"
+                                  : "bg-white/5 text-blue-200/75"
+                              )}
+                            >
+                              <Icon className="h-6 w-6" strokeWidth={1.75} />
+                            </div>
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="font-semibold text-white text-sm">
+                                  {m.label}
+                                </span>
+                                <span className="text-[11px] text-blue-300/60 font-medium">
+                                  {m.subtitle}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-blue-200/55 leading-snug">
+                                {m.description}
+                              </p>
+                              <span className="inline-flex mt-1.5 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-100/90 border border-blue-400/20">
+                                {m.constraint}
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="limit-b" className="text-blue-100/90">
-                      Límite superior (b)
-                    </Label>
-                    <Input
-                      id="limit-b"
-                      value={b}
-                      onChange={(e) => setB(e.target.value)}
-                      type="number"
-                      step="0.1"
-                      className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="intervals" className="text-blue-100/90">
-                    Subintervalos (n)
-                  </Label>
-                  <Input
-                    id="intervals"
-                    value={n}
-                    onChange={(e) => setN(e.target.value)}
-                    type="number"
-                    className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="method" className="text-blue-100/90">
-                    Método
-                  </Label>
-                  <Select value={method} onValueChange={setMethod}>
-                    <SelectTrigger
-                      id="method"
-                      className="bg-black/20 border-white/20 focus:ring-primary/50 text-white"
-                    >
-                      <SelectValue placeholder="Seleccionar método" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background/80 backdrop-blur-md">
-                      <SelectItem value="rectangle">
-                        Regla del rectángulo (punto medio)
-                      </SelectItem>
-                      <SelectItem value="trapezoid">Regla del trapecio</SelectItem>
-                      <SelectItem value="simpson13">Simpson 1/3</SelectItem>
-                      <SelectItem value="simpson38">Simpson 3/8</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                </section>
 
                 <Button
                   onClick={calculateIntegral}
-                  className="w-full font-bold text-lg bg-gradient-to-r from-accent to-blue-500 hover:from-accent/80 hover:to-blue-500/80 transition-all duration-300 transform hover:scale-105 text-white"
+                  className="w-full h-12 font-bold text-base rounded-xl bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-500/90 transition-all duration-300 shadow-lg shadow-accent/20 hover:shadow-accent/30 text-white border-0"
                 >
-                  Calcular
+                  Calcular integral
                 </Button>
               </CardContent>
-              <CardFooter className="flex-col items-stretch space-y-3">
+              <CardFooter className="flex-col items-stretch space-y-4 pt-2 border-t border-blue-400/15 bg-black/20">
                 <div>
-                  <Label className="font-bold text-lg text-blue-100/90">
+                  <Label className="text-xs font-semibold uppercase tracking-widest text-blue-200/55 mb-2 block">
                     Resultado aproximado
                   </Label>
-                  <div className="w-full text-center text-3xl font-mono p-4 bg-black/30 rounded-md tracking-widest text-white mt-1">
+                  <div
+                    className={cn(
+                      "w-full text-center text-3xl sm:text-4xl font-mono py-5 px-3 rounded-xl tracking-tight text-white",
+                      "bg-gradient-to-br from-black/50 to-black/30 border border-blue-400/20 shadow-inner",
+                      error && "border-destructive/40"
+                    )}
+                  >
                     {error ? (
-                      <span className="text-destructive text-base">{error}</span>
+                      <span className="text-destructive text-sm font-sans font-normal leading-snug px-1">
+                        {error}
+                      </span>
                     ) : res !== null ? (
                       res
                     ) : (
-                      "…"
+                      <span className="text-blue-300/30">—</span>
                     )}
                   </div>
                 </div>
 
                 {!error && res !== null && (
-                  <div className="space-y-2 text-sm text-blue-100/85 border border-blue-400/20 rounded-md p-3 bg-black/20">
-                    <p>
-                      <span className="text-blue-200/70">Subintervalos (n):</span>{" "}
-                      <span className="font-mono">{n}</span>
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-blue-200/45">
+                      Métricas del método
                     </p>
-                    {iterationCount !== null && (
-                      <p>
-                        <span className="text-blue-200/70">
-                          Iteraciones del método (pasos/paneles reportados):
-                        </span>{" "}
-                        <span className="font-mono">{iterationCount}</span>
-                      </p>
-                    )}
-                    {functionEvaluations !== null && (
-                      <p>
-                        <span className="text-blue-200/70">
-                          Evaluaciones de f(x):
-                        </span>{" "}
-                        <span className="font-mono">{functionEvaluations}</span>
-                      </p>
-                    )}
-                    {relativeError !== null && (
-                      <p>
-                        <span className="text-blue-200/70">Error relativo:</span>{" "}
-                        <span className="font-mono">
-                          {(relativeError * 100).toFixed(6)} %
-                        </span>
-                      </p>
-                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-blue-400/20 bg-blue-950/20 p-3 flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-blue-200/50 text-[10px] uppercase tracking-wide">
+                          <Hash className="h-3 w-3 text-accent" />
+                          n
+                        </div>
+                        <span className="font-mono text-lg text-white">{n}</span>
+                      </div>
+                      {iterationCount !== null && (
+                        <div className="rounded-lg border border-blue-400/20 bg-blue-950/20 p-3 flex flex-col gap-1">
+                          <div className="flex items-center gap-1.5 text-blue-200/50 text-[10px] uppercase tracking-wide">
+                            <Repeat className="h-3 w-3 text-primary" />
+                            Iteraciones
+                          </div>
+                          <span className="font-mono text-lg text-white">{iterationCount}</span>
+                        </div>
+                      )}
+                      {functionEvaluations !== null && (
+                        <div className="rounded-lg border border-blue-400/20 bg-blue-950/20 p-3 flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <div className="flex items-center gap-1.5 text-blue-200/50 text-[10px] uppercase tracking-wide">
+                            <Gauge className="h-3 w-3 text-accent" />
+                            Evaluaciones f
+                          </div>
+                          <span className="font-mono text-lg text-white">{functionEvaluations}</span>
+                        </div>
+                      )}
+                      {relativeError !== null && (
+                        <div className="rounded-lg border border-emerald-500/25 bg-emerald-950/15 p-3 flex flex-col gap-1 col-span-2 sm:col-span-1">
+                          <div className="flex items-center gap-1.5 text-emerald-200/60 text-[10px] uppercase tracking-wide">
+                            <Percent className="h-3 w-3" />
+                            Error relativo
+                          </div>
+                          <span className="font-mono text-lg text-emerald-100/95">
+                            {(relativeError * 100).toFixed(4)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     {referenceNote && (
-                      <p className="text-xs text-blue-200/60 leading-snug">
+                      <p className="text-[11px] text-blue-200/55 leading-relaxed border-l-2 border-accent/40 pl-3 py-0.5">
                         {referenceNote}
                       </p>
                     )}
@@ -530,41 +671,78 @@ export default function Calculator() {
             </Card>
           </div>
 
-          <div className="lg:col-span-2 space-y-4">
-            <div className="space-y-1">
-            <div
-              ref={sketchRef}
-              className="w-full min-h-[400px] bg-black/30 rounded-lg shadow-lg border border-blue-400/20"
-            />
-            <p className="text-xs text-blue-200/50 text-center">
-              Tras calcular, aquí se dibuja la función y la aproximación del área (en Simpson, el relleno entre nodos es ilustrativo).
-            </p>
-            </div>
-            <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-              <CardContent className="p-4 flex items-center justify-between gap-6 flex-wrap">
+          <div className="lg:col-span-2 space-y-5">
+            <Card className="overflow-hidden bg-white/5 backdrop-blur-md border border-blue-400/25 shadow-xl shadow-primary/10 ring-1 ring-white/5">
+              <CardHeader className="pb-3 border-b border-blue-400/15 bg-black/15">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-lg bg-accent/15 p-2 text-primary">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg font-bold text-white tracking-tight">
+                        Visualización del método
+                      </CardTitle>
+                      <CardDescription className="text-blue-200/65 text-sm mt-0.5">
+                        Curva y región que aproxima el área bajo{" "}
+                        <span className="font-mono text-blue-100/80">f</span> en{" "}
+                        <span className="font-mono text-blue-100/80">[a, b]</span>.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div
+                  ref={sketchRef}
+                  className="w-full min-h-[400px] bg-gradient-to-b from-[#0a1525] to-[#050a12] border-t border-blue-400/10 flex items-center justify-center"
+                />
+                <p className="text-xs text-blue-200/45 text-center px-4 py-3 border-t border-blue-400/10 bg-black/20">
+                  Tras pulsar <span className="text-blue-200/70">Calcular integral</span>, el lienzo muestra la
+                  aproximación (en Simpson, el relleno entre nodos es ilustrativo).
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white/5 backdrop-blur-md border border-blue-400/20 shadow-lg">
+              <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                 <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-blue-200/45 hidden sm:block mr-1">
+                    Animación
+                  </span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     onClick={handlePlay}
                     disabled={animating}
+                    className="h-11 w-11 rounded-full border-accent/40 bg-accent/10 text-accent hover:bg-accent/20 hover:text-accent"
+                    aria-label="Reproducir animación"
                   >
-                    <Play className="text-accent hover:text-accent/80" />
+                    <Play className="h-5 w-5" />
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
                     onClick={handlePause}
                     disabled={!animating}
+                    className="h-11 w-11 rounded-full border-white/15 bg-white/5 text-blue-200 hover:bg-white/10 hover:text-white"
+                    aria-label="Pausar animación"
                   >
-                    <Pause className="text-muted-foreground hover:text-white" />
+                    <Pause className="h-5 w-5" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={calculateIntegral}>
-                    <RefreshCw className="text-muted-foreground hover:text-white" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={calculateIntegral}
+                    className="h-11 w-11 rounded-full border-white/15 bg-white/5 text-blue-200 hover:bg-white/10 hover:text-white"
+                    aria-label="Recalcular y reiniciar vista"
+                  >
+                    <RefreshCw className="h-5 w-5" />
                   </Button>
                 </div>
-                <div className="flex-1 flex items-center gap-3 min-w-[200px]">
-                  <Label className="text-blue-100/90 whitespace-nowrap">
+                <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 min-w-0 w-full">
+                  <Label className="text-blue-100/80 text-xs sm:w-24 shrink-0 flex items-center gap-1.5">
+                    <Gauge className="h-3.5 w-3.5 text-accent" />
                     Velocidad
                   </Label>
                   <Slider
@@ -572,56 +750,86 @@ export default function Calculator() {
                     onValueChange={(val) => setSpeed(101 - val[0])}
                     max={100}
                     step={1}
-                    className="[&>span>span]:bg-accent"
+                    className="flex-1 [&>span>span]:bg-accent [&>span>span]:shadow-[0_0_12px_hsl(215,100%,46%,0.45)]"
                   />
                 </div>
               </CardContent>
             </Card>
 
             {iterationData.length > 0 && (
-              <Card className="bg-white/5 backdrop-blur-sm border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-white">Datos de iteración</CardTitle>
-                  <CardDescription className="text-blue-200/70">
-                    Desglose según el método seleccionado.
-                  </CardDescription>
+              <Card className="overflow-hidden bg-white/5 backdrop-blur-md border border-blue-400/25 shadow-xl shadow-primary/10 ring-1 ring-white/5">
+                <CardHeader className="border-b border-blue-400/15 bg-black/15 pb-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-lg bg-primary/15 p-2 text-primary mt-0.5">
+                        <Table2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-white">
+                          Tabla de iteración
+                        </CardTitle>
+                        <CardDescription className="text-blue-200/65 mt-1 max-w-xl">
+                          Pasos generados por el método activo (
+                          <span className="font-medium text-blue-100/80">
+                            {INTEGRATION_METHODS.find((m) => m.value === method)?.label ?? method}
+                          </span>
+                          ).
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-72 w-full">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="hover:bg-transparent border-blue-400/20">
-                          <TableHead className="w-[100px] text-blue-100/90">
-                            Paso
-                          </TableHead>
-                          <TableHead className="text-blue-100/90">x / tramo</TableHead>
-                          <TableHead className="text-blue-100/90">f(x)</TableHead>
-                          <TableHead className="text-blue-100/90">Término</TableHead>
-                          <TableHead className="text-right text-blue-100/90">
-                            Acumulado
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {iterationData.map((row, index) => (
-                          <TableRow
-                            key={`${row.step}-${index}`}
-                            className="border-blue-400/20 text-blue-200/80"
-                          >
-                            <TableCell className="font-medium">{row.step}</TableCell>
-                            <TableCell>{row.x}</TableCell>
-                            <TableCell>{row.fx}</TableCell>
-                            <TableCell>{row.term}</TableCell>
-                            <TableCell className="text-right">{row.area}</TableCell>
+                <CardContent className="p-0">
+                  <ScrollArea className="h-[min(22rem,50vh)] w-full">
+                    <div className="p-4">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-blue-400/25 hover:bg-transparent bg-blue-950/40">
+                            <TableHead className="w-[72px] text-blue-100/95 font-semibold">
+                              Paso
+                            </TableHead>
+                            <TableHead className="text-blue-100/95 font-semibold min-w-[120px]">
+                              x / tramo
+                            </TableHead>
+                            <TableHead className="text-blue-100/95 font-semibold">f(x)</TableHead>
+                            <TableHead className="text-blue-100/95 font-semibold">Término</TableHead>
+                            <TableHead className="text-right text-blue-100/95 font-semibold">
+                              Acumulado
+                            </TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {iterationData.map((row, index) => (
+                            <TableRow
+                              key={`${row.step}-${index}`}
+                              className={cn(
+                                "border-blue-400/15 transition-colors",
+                                index % 2 === 0 ? "bg-black/10" : "bg-transparent",
+                                "hover:bg-blue-500/10"
+                              )}
+                            >
+                              <TableCell className="font-mono text-sm text-primary/95">
+                                {row.step}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs text-blue-100/85 max-w-[200px] truncate sm:max-w-none sm:whitespace-normal">
+                                {row.x}
+                              </TableCell>
+                              <TableCell className="font-mono text-xs text-blue-200/90">{row.fx}</TableCell>
+                              <TableCell className="font-mono text-xs text-blue-200/90">{row.term}</TableCell>
+                              <TableCell className="text-right font-mono text-xs text-white/95">
+                                {row.area}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </ScrollArea>
                 </CardContent>
               </Card>
             )}
           </div>
+        </div>
         </div>
       </main>
     </>
