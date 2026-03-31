@@ -47,7 +47,7 @@ export default function WelcomePage() {
           Ilusión Integral
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-lg text-blue-200/80">
-          Un viaje interactivo al mundo de la integración numérica. Elige un método para comenzar tu exploración y encontrar los bugs ocultos.
+          Herramienta educativa para integración numérica: elige un método, ajusta n y compara el resultado con una referencia de alta precisión, el error relativo y el coste en evaluaciones de f.
         </p>
       </div>
 
