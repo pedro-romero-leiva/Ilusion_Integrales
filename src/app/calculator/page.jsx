@@ -103,7 +103,6 @@ export default function Calculator() {
 
   const [animating, setAnimating] = useState(false);
   const [speed, setSpeed] = useState(50);
-  const [p5Loaded, setP5Loaded] = useState(false);
 
   const p5Instance = useRef(null);
   const sketchRef = useRef(null);
@@ -247,14 +246,6 @@ export default function Calculator() {
         p.endShape();
       }
 
-      // Interpolación de Lagrange grado 2 — parábola por 3 puntos (Simpson 1/3)
-      function lag3(x, x0, y0, x1, y1, x2, y2) {
-        const L0 = ((x - x1) * (x - x2)) / ((x0 - x1) * (x0 - x2));
-        const L1 = ((x - x0) * (x - x2)) / ((x1 - x0) * (x1 - x2));
-        const L2 = ((x - x0) * (x - x1)) / ((x2 - x0) * (x2 - x1));
-        return y0 * L0 + y1 * L1 + y2 * L2;
-      }
-
       // Interpolación de Lagrange grado 3 — cúbica por 4 puntos (Simpson 3/8)
       function lag4(x, x0, y0, x1, y1, x2, y2, x3, y3) {
         const L0 = ((x-x1)*(x-x2)*(x-x3)) / ((x0-x1)*(x0-x2)*(x0-x3));
@@ -276,18 +267,15 @@ export default function Calculator() {
           const xb = xa + dx;
           const xm = xa + dx / 2;
           const ym = fn(xm);
-          if (!Number.isFinite(ym)) return;
-          const cxa = mX(xa), cxb = mX(xb), cym = mY(ym);
-          const top = Math.min(z, cym);
-          const rh = Math.abs(z - cym);
-          p.rect(cxa, top, cxb - cxa, rh);
-          // Punto de evaluación en el centro
-          p.fill(cr, cg, cb, 230);
-          p.noStroke();
-          p.circle(mX(xm), cym, 6);
+          if (!Number.isNaN(ym) && Number.isFinite(ym)) {
+            const cxa = mX(xa), cxb = mX(xb), cym = mY(ym);
+            const top = Math.min(z, cym);
+            p.rect(cxa, top, cxb - cxa, Math.abs(z - cym));
+          }
           return;
         }
 
+        // Trapecio: área exacta bajo el segmento lineal entre extremos
         if (methodKey === "trapezoid") {
           const xa = xMin + i * dx;
           const xb = xa + dx;
@@ -302,22 +290,17 @@ export default function Calculator() {
           return;
         }
 
-        // Simpson 1/3: parábola de Lagrange grado 2 sobre pares de subintervalos
         if (methodKey === "simpson13") {
-          if (i % 2 !== 0 || i + 2 > N) return;
-          const x0 = xMin + i * dx;
-          const x1 = x0 + dx, x2 = x0 + 2 * dx;
-          const y0 = fn(x0), y1 = fn(x1), y2 = fn(x2);
-          if (![y0, y1, y2].every(Number.isFinite)) return;
-          const nSamp = Math.max(40, Math.round(mX(x2) - mX(x0)));
+          // Equipo 1 — sin cambios en su visualización
+          const xa = xMin + i * dx;
+          const xb = xa + dx;
+          const ya = fn(xa), yb = fn(xb);
+          if (!Number.isFinite(ya) || !Number.isFinite(yb)) return;
           p.beginShape();
-          p.vertex(mX(x0), z);
-          for (let s = 0; s <= nSamp; s++) {
-            const x = x0 + (s / nSamp) * (x2 - x0);
-            const y = lag3(x, x0, y0, x1, y1, x2, y2);
-            if (Number.isFinite(y)) p.vertex(mX(x), mY(y));
-          }
-          p.vertex(mX(x2), z);
+          p.vertex(mX(xa), z);
+          p.vertex(mX(xa), mY(ya));
+          p.vertex(mX(xb), mY(yb));
+          p.vertex(mX(xb), z);
           p.endShape(p.CLOSE);
           return;
         }
@@ -436,11 +419,6 @@ export default function Calculator() {
       return;
     }
 
-    if (!p5Loaded) {
-      setError("La librería de gráficos aún se está cargando. Espera un momento y vuelve a intentar.");
-      return;
-    }
-
     let calculation;
     try {
       switch (method) {
@@ -524,8 +502,10 @@ export default function Calculator() {
       p5Instance.current = null;
     }
 
-    const sketch = buildSketch(sketchContextRef.current);
-    p5Instance.current = new window.p5(sketch, sketchRef.current);
+    if (window.p5) {
+      const sketch = buildSketch(sketchContextRef.current);
+      p5Instance.current = new window.p5(sketch, sketchRef.current);
+    }
   };
 
   const handlePlay = () => {
@@ -543,7 +523,7 @@ export default function Calculator() {
     <>
       <Script
         src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.1/p5.min.js"
-        onLoad={() => setP5Loaded(true)}
+        strategy="afterInteractive"
       />
       <main className="min-h-screen w-full p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">
