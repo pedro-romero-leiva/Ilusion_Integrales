@@ -127,149 +127,275 @@ export default function Calculator() {
     }
   }, []);
 
+  // Punto 9 y 10 — Samanta: visualización gráfica funcional por método
   const buildSketch = useCallback((ctx) => {
-    const {
-      evaluate,
-      xMin,
-      xMax,
-      nIntervals,
-      methodKey,
-    } = ctx;
+    const { evaluate, xMin, xMax, nIntervals, methodKey } = ctx;
 
     return (p) => {
       const w = sketchRef.current?.offsetWidth || 600;
       const h = 400;
-      const padding = 40;
+      const padL = 58;
+      const padR = 18;
+      const padT = 28;
+      const padB = 42;
       const N = nIntervals;
       const dx = (xMax - xMin) / N;
 
+      // Color distinto por método
+      const METHOD_COLOR = {
+        rectangle: [100, 220, 130],
+        trapezoid: [80, 185, 255],
+        simpson13: [200, 105, 255],
+        simpson38: [255, 165, 60],
+      };
+      const [cr, cg, cb] = METHOD_COLOR[methodKey] ?? [120, 160, 255];
+
       let yMin = Infinity;
       let yMax = -Infinity;
-
-      const func = (x) => evaluate(x);
+      const fn = (x) => evaluate(x);
 
       p.setup = () => {
         p.createCanvas(w, h);
         p.frameRate(30);
 
-        for (let i = 0; i <= w; i++) {
-          const x = p.map(i, 0, w, xMin, xMax);
-          const y = func(x);
-          if (!Number.isNaN(y) && Number.isFinite(y)) {
+        // Muestrear la función para calcular el rango Y
+        const SAMPLES = 400;
+        for (let i = 0; i <= SAMPLES; i++) {
+          const x = xMin + (i / SAMPLES) * (xMax - xMin);
+          const y = fn(x);
+          if (Number.isFinite(y)) {
             if (y < yMin) yMin = y;
             if (y > yMax) yMax = y;
           }
         }
-
-        if (yMin === yMax) {
-          yMin -= 1;
-          yMax += 1;
-        }
-
-        const yRange = yMax - yMin;
-        yMin -= yRange * 0.1;
-        yMax += yRange * 0.1;
-
-        if (yMin === Infinity || Number.isNaN(yMin)) {
-          yMin = -1;
-          yMax = 1;
-        }
+        if (!Number.isFinite(yMin)) { yMin = -1; yMax = 1; }
+        if (yMin === yMax) { yMin -= 1; yMax += 1; }
+        const yr = yMax - yMin;
+        yMin -= yr * 0.15;
+        yMax += yr * 0.15;
       };
 
-      const mapX = (x) => p.map(x, xMin, xMax, padding, w - padding);
-      const mapY = (y) => p.map(y, yMin, yMax, h - padding, padding);
+      const mX = (x) => p.map(x, xMin, xMax, padL, w - padR);
+      const mY = (y) => p.map(y, yMin, yMax, h - padB, padT);
+      const getZeroY = () => {
+        if (yMin <= 0 && yMax >= 0) return mY(0);
+        return yMin > 0 ? h - padB : padT;
+      };
 
-      function drawAxes() {
-        p.stroke(100);
-        p.strokeWeight(1);
-        p.line(padding, mapY(0), w - padding, mapY(0));
-        if (xMin <= 0 && xMax >= 0) {
-          p.line(mapX(0), padding, mapX(0), h - padding);
+      // Cuadrícula de referencia
+      function drawGrid() {
+        p.strokeWeight(0.5);
+        p.textSize(9.5);
+        const nY = 5;
+        for (let i = 0; i <= nY; i++) {
+          const yv = yMin + (i / nY) * (yMax - yMin);
+          const yp = mY(yv);
+          p.stroke(45, 70, 105, 110);
+          p.line(padL, yp, w - padR, yp);
+          p.fill(115, 150, 195);
+          p.noStroke();
+          p.textAlign(p.RIGHT, p.CENTER);
+          p.text(yv.toFixed(2), padL - 4, yp);
         }
-
-        p.fill(150);
-        p.noStroke();
-        p.textAlign(p.CENTER, p.TOP);
-        p.text(xMin.toFixed(1), padding, mapY(0) + 5);
-        p.textAlign(p.RIGHT, p.TOP);
-        p.text(xMax.toFixed(1), w - padding, mapY(0) + 5);
-
-        p.textAlign(p.LEFT, p.CENTER);
-        if (xMin <= 0 && xMax >= 0) {
-          p.text(yMax.toFixed(1), mapX(0) + 5, padding + 10);
-          p.text(yMin.toFixed(1), mapX(0) + 5, h - padding);
+        const nX = 5;
+        for (let i = 0; i <= nX; i++) {
+          const xv = xMin + (i / nX) * (xMax - xMin);
+          const xp = mX(xv);
+          p.stroke(45, 70, 105, 110);
+          p.line(xp, padT, xp, h - padB);
+          p.fill(115, 150, 195);
+          p.noStroke();
+          p.textAlign(p.CENTER, p.TOP);
+          p.text(xv.toFixed(2), xp, h - padB + 4);
         }
       }
 
-      function drawFunctionCurve() {
+      // Ejes y etiquetas de ejes
+      function drawAxes() {
+        const z = getZeroY();
+        p.stroke(160, 185, 225);
+        p.strokeWeight(1.5);
+        p.line(padL, z, w - padR, z);
+        if (xMin <= 0 && xMax >= 0) {
+          p.line(mX(0), padT, mX(0), h - padB);
+        }
+        p.fill(175, 200, 235);
+        p.noStroke();
+        p.textSize(11);
+        p.textAlign(p.CENTER, p.BOTTOM);
+        p.text("x", (padL + w - padR) / 2, h - 1);
+        p.textAlign(p.LEFT, p.CENTER);
+        p.text("f(x)", 3, (padT + h - padB) / 2);
+      }
+
+      // Curva real de la función (en azul claro, sobre todo lo demás)
+      function drawCurve() {
         p.noFill();
-        p.stroke(156, 200, 255);
-        p.strokeWeight(2);
+        p.stroke(156, 210, 255);
+        p.strokeWeight(2.5);
         p.beginShape();
-        for (let px = padding; px <= w - padding; px++) {
-          const x = p.map(px, padding, w - padding, xMin, xMax);
-          const y = func(x);
-          if (!Number.isNaN(y) && Number.isFinite(y)) {
-            p.vertex(px, mapY(y));
+        for (let px = padL; px <= w - padR; px++) {
+          const x = p.map(px, padL, w - padR, xMin, xMax);
+          const y = fn(x);
+          if (Number.isFinite(y)) {
+            p.vertex(px, mY(y));
+          } else {
+            p.endShape();
+            p.beginShape();
           }
         }
         p.endShape();
       }
 
-      function drawIntegrationStep(i) {
-        const xI = xMin + i * dx;
-        const xI1 = xMin + (i + 1) * dx;
-        const yI = func(xI);
-        const yI1 = func(xI1);
-        const canvasXI = mapX(xI);
-        const canvasXI1 = mapX(xI1);
-        const zeroY = mapY(0);
+      // Interpolación de Lagrange grado 2 — parábola por 3 puntos (Simpson 1/3)
+      function lag3(x, x0, y0, x1, y1, x2, y2) {
+        const L0 = ((x - x1) * (x - x2)) / ((x0 - x1) * (x0 - x2));
+        const L1 = ((x - x0) * (x - x2)) / ((x1 - x0) * (x1 - x2));
+        const L2 = ((x - x0) * (x - x1)) / ((x2 - x0) * (x2 - x1));
+        return y0 * L0 + y1 * L1 + y2 * L2;
+      }
 
-        p.stroke(156, 200, 255, 140);
-        p.fill(60, 120, 200, 70);
+      // Interpolación de Lagrange grado 3 — cúbica por 4 puntos (Simpson 3/8)
+      function lag4(x, x0, y0, x1, y1, x2, y2, x3, y3) {
+        const L0 = ((x-x1)*(x-x2)*(x-x3)) / ((x0-x1)*(x0-x2)*(x0-x3));
+        const L1 = ((x-x0)*(x-x2)*(x-x3)) / ((x1-x0)*(x1-x2)*(x1-x3));
+        const L2 = ((x-x0)*(x-x1)*(x-x3)) / ((x2-x0)*(x2-x1)*(x2-x3));
+        const L3 = ((x-x0)*(x-x1)*(x-x2)) / ((x3-x0)*(x3-x1)*(x3-x2));
+        return y0*L0 + y1*L1 + y2*L2 + y3*L3;
+      }
+
+      // Dibuja el área aproximada del paso i según el método activo
+      function drawStep(i) {
+        const z = getZeroY();
+        p.fill(cr, cg, cb, 52);
+        p.stroke(cr, cg, cb, 175);
+        p.strokeWeight(1);
 
         if (methodKey === "rectangle") {
-          const xMid = xI + dx / 2;
-          const yMid = func(xMid);
-          const canvasYMid = mapY(yMid);
-          const rectW = canvasXI1 - canvasXI;
-          const top = Math.min(zeroY, canvasYMid);
-          const rectH = Math.abs(zeroY - canvasYMid);
-          p.rect(canvasXI, top, rectW, rectH);
+          const xa = xMin + i * dx;
+          const xb = xa + dx;
+          const xm = xa + dx / 2;
+          const ym = fn(xm);
+          if (!Number.isFinite(ym)) return;
+          const cxa = mX(xa), cxb = mX(xb), cym = mY(ym);
+          const top = Math.min(z, cym);
+          const rh = Math.abs(z - cym);
+          p.rect(cxa, top, cxb - cxa, rh);
+          // Punto de evaluación en el centro
+          p.fill(cr, cg, cb, 230);
+          p.noStroke();
+          p.circle(mX(xm), cym, 6);
           return;
         }
 
-        if (Number.isNaN(yI) || Number.isNaN(yI1)) return;
-        const canvasYI = mapY(yI);
-        const canvasYI1 = mapY(yI1);
-        p.beginShape();
-        p.vertex(canvasXI, zeroY);
-        p.vertex(canvasXI, canvasYI);
-        p.vertex(canvasXI1, canvasYI1);
-        p.vertex(canvasXI1, zeroY);
-        p.endShape(p.CLOSE);
+        if (methodKey === "trapezoid") {
+          const xa = xMin + i * dx;
+          const xb = xa + dx;
+          const ya = fn(xa), yb = fn(xb);
+          if (!Number.isFinite(ya) || !Number.isFinite(yb)) return;
+          p.beginShape();
+          p.vertex(mX(xa), z);
+          p.vertex(mX(xa), mY(ya));
+          p.vertex(mX(xb), mY(yb));
+          p.vertex(mX(xb), z);
+          p.endShape(p.CLOSE);
+          return;
+        }
+
+        // Simpson 1/3: parábola de Lagrange grado 2 sobre pares de subintervalos
+        if (methodKey === "simpson13") {
+          if (i % 2 !== 0 || i + 2 > N) return;
+          const x0 = xMin + i * dx;
+          const x1 = x0 + dx, x2 = x0 + 2 * dx;
+          const y0 = fn(x0), y1 = fn(x1), y2 = fn(x2);
+          if (![y0, y1, y2].every(Number.isFinite)) return;
+          const nSamp = Math.max(40, Math.round(mX(x2) - mX(x0)));
+          p.beginShape();
+          p.vertex(mX(x0), z);
+          for (let s = 0; s <= nSamp; s++) {
+            const x = x0 + (s / nSamp) * (x2 - x0);
+            const y = lag3(x, x0, y0, x1, y1, x2, y2);
+            if (Number.isFinite(y)) p.vertex(mX(x), mY(y));
+          }
+          p.vertex(mX(x2), z);
+          p.endShape(p.CLOSE);
+          return;
+        }
+
+        // Simpson 3/8: cúbica de Lagrange grado 3 sobre grupos de 3 subintervalos
+        if (methodKey === "simpson38") {
+          if (i % 3 !== 0 || i + 3 > N) return;
+          const x0 = xMin + i * dx;
+          const x1 = x0 + dx, x2 = x0 + 2 * dx, x3 = x0 + 3 * dx;
+          const y0 = fn(x0), y1 = fn(x1), y2 = fn(x2), y3 = fn(x3);
+          if (![y0, y1, y2, y3].every(Number.isFinite)) return;
+          const nSamp = Math.max(40, Math.round(mX(x3) - mX(x0)));
+          p.beginShape();
+          p.vertex(mX(x0), z);
+          for (let s = 0; s <= nSamp; s++) {
+            const x = x0 + (s / nSamp) * (x3 - x0);
+            const y = lag4(x, x0, y0, x1, y1, x2, y2, x3, y3);
+            if (Number.isFinite(y)) p.vertex(mX(x), mY(y));
+          }
+          p.vertex(mX(x3), z);
+          p.endShape(p.CLOSE);
+          return;
+        }
+      }
+
+      // Puntos nodo en cada subdivisión del intervalo
+      function drawNodes() {
+        const z = getZeroY();
+        for (let i = 0; i <= N; i++) {
+          const x = xMin + i * dx;
+          const y = fn(x);
+          if (!Number.isFinite(y)) continue;
+          const px = mX(x), py = mY(y);
+          p.stroke(cr, cg, cb, 65);
+          p.strokeWeight(0.8);
+          p.line(px, z, px, py);
+          p.fill(cr, cg, cb, 215);
+          p.noStroke();
+          p.circle(px, py, 5);
+        }
+      }
+
+      // Etiqueta del método activo y parámetros en la esquina superior
+      function drawLabel() {
+        const names = {
+          rectangle: "Rectángulo (Punto Medio)",
+          trapezoid: "Trapecio Compuesto",
+          simpson13: "Simpson 1/3 — Parabólico",
+          simpson38: "Simpson 3/8 — Cúbico",
+        };
+        p.noStroke();
+        p.textSize(11);
+        p.fill(cr, cg, cb, 210);
+        p.textAlign(p.LEFT, p.TOP);
+        p.text(names[methodKey] ?? methodKey, padL + 6, padT + 5);
+        p.textSize(10);
+        p.fill(140, 175, 215, 165);
+        p.text(`n = ${N}   [${xMin}, ${xMax}]`, padL + 6, padT + 20);
       }
 
       p.draw = () => {
         p.background(10, 20, 35);
-        drawAxes();
-        drawFunctionCurve();
+        drawGrid();
 
         const animate = animatingRef.current;
         const spd = Math.max(1, Math.floor(speedRef.current));
 
         if (animate && animStepRef.current < N) {
-          for (let i = 0; i < animStepRef.current; i++) {
-            drawIntegrationStep(i);
-          }
-          if (p.frameCount % spd === 0) {
-            animStepRef.current += 1;
-          }
+          for (let i = 0; i < animStepRef.current; i++) drawStep(i);
+          if (p.frameCount % spd === 0) animStepRef.current += 1;
         } else {
-          for (let i = 0; i < N; i++) {
-            drawIntegrationStep(i);
-          }
+          for (let i = 0; i < N; i++) drawStep(i);
         }
+
+        drawNodes();
+        drawAxes();
+        drawCurve();
+        drawLabel();
       };
     };
   }, []);
