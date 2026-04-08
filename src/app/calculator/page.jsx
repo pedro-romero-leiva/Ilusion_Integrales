@@ -351,8 +351,12 @@ export default function Calculator() {
           </div>
 
           <div className="lg:col-span-2 space-y-4">
-            <div ref={sketchRef} className="w-full h-[400px] bg-black/30 rounded-lg shadow-lg border border-blue-400/20 flex items-center justify-center">
-              <p className="text-muted-foreground">Haz clic en 'Calcular' para visualizar</p>
+            <div ref={sketchRef} className="w-full h-[400px] bg-black/30 rounded-lg shadow-lg border border-blue-400/20 overflow-hidden">
+              {res === null && !error && (
+                <p className="text-muted-foreground flex items-center justify-center h-full">
+                  Haz clic en 'Calcular' para visualizar
+                </p>
+              )}
             </div>
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardContent className="p-4 flex items-center justify-between gap-6">
