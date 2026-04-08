@@ -1,5 +1,7 @@
 import type {NextConfig} from 'next';
+import path from 'path';
 
+//Parte Jafeth punto 3 resuelto
 const isProd = process.env.NODE_ENV === 'production';
 
 const nextConfig: NextConfig = {
@@ -9,12 +11,7 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  outputFileTracingRoot: path.join(process.cwd()),
 };
 
 export default nextConfig;

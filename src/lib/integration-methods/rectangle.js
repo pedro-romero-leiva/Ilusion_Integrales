@@ -1,20 +1,29 @@
+//Parte Jafeth punto 6 resuelto
 export const rectangleRule = (func, lower, upper, intervals) => {
   const h = (upper - lower) / intervals;
   let sum = 0;
   const data = [];
   let cumulativeArea = 0;
-  for (let i = 1; i <= intervals; i++) {
-    // Bug: El punto de evaluación es el punto derecho, no el punto medio.
-    const x_val = lower + i * h;
-    const fx = func(x_val);
-    
-    // Bug #2 (Exagerado): Se suma el cuadrado de f(x) en lugar de f(x).
-    sum += fx * fx;
-    
-    const term = h * fx; // El 'term' para la tabla se mantiene "correcto" para disfrazar el bug.
+
+  for (let i = 0; i < intervals; i++) {
+    const xMid = lower + (i + 0.5) * h;
+    const fx = func(xMid);
+    const term = h * fx;
+    sum += term;
     cumulativeArea += term;
-    data.push({ step: i, x: x_val.toFixed(4), fx: fx.toFixed(4), term: term.toFixed(4), area: cumulativeArea.toFixed(4) });
+    data.push({
+      step: i + 1,
+      x: xMid.toFixed(6),
+      fx: Number.isFinite(fx) ? fx.toFixed(6) : "NaN",
+      term: term.toFixed(6),
+      area: cumulativeArea.toFixed(6),
+    });
   }
-  // Bug #3 (Exagerado): Falta la multiplicación final por 'h' y la suma es incorrecta de por sí.
-  return { result: sum, data };
+
+  return {
+    result: sum,
+    data,
+    iterationCount: intervals,
+    functionEvaluations: intervals,
+  };
 };

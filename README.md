@@ -1,58 +1,40 @@
-# Ilusión Integral - Calculadora de Integrales Numéricas
+# Ilusión Integral — Calculadora de integrales numéricas
 
-¡Bienvenido a Ilusión Integral! Esta es una aplicación web interactiva construida con Next.js, diseñada como una herramienta educativa para visualizar y depurar diferentes métodos de integración numérica.
+Aplicación web (Next.js) para **aproximar** \(\int_a^b f(x)\,dx\) con cuatro métodos clásicos, **tabla de iteración**, **visualización** con p5.js, **error relativo** frente a una referencia de alta precisión (Simpson 1/3 con \(n=4096\)) y métricas de **iteraciones** y **evaluaciones de \(f\)**.
 
-## El Desafío
+Las expresiones se evalúan con **`expr-eval`** (sin `eval()` del navegador).
 
-La aplicación ha sido creada con **múltiples bugs intencionales** en cada uno de los algoritmos de cálculo. Tu misión, si decides aceptarla, es:
+## Métodos
 
-1.  **Explorar** los diferentes métodos de integración.
-2.  **Identificar** por qué los resultados son incorrectos.
-3.  **Depurar** el código para encontrar los errores de lógica y matemáticos.
-4.  **Corregir** los bugs y hacer que los cálculos sean precisos.
+- Regla del **rectángulo** (punto medio)
+- Regla del **trapecio** (compuesta)
+- **Simpson 1/3** (\(n\) par)
+- **Simpson 3/8** (\(n\) múltiplo de 3)
 
-## Características
+## Documentación del segundo avance
 
--   **Interfaz Moderna:** Un diseño visualmente atractivo que utiliza Tailwind CSS para una experiencia de usuario fluida.
--   **Visualización Interactiva:** Un lienzo P5.js que grafica la función y anima el proceso de aproximación del área para cada método.
--   **Cálculos Detallados:** Una tabla que muestra los datos de cada iteración, permitiendo un análisis paso a paso.
--   **Controles de Animación:** Pausa, reanuda y reinicia la visualización para estudiar el comportamiento a tu propio ritmo.
+Ver **[docs/segundo-avance-integracion-numerica.md](./docs/segundo-avance-integracion-numerica.md)** (definiciones, correcciones, verificación y límites del alcance).
 
-## Métodos de Integración (con bugs 🐛)
+## Stack
 
--   Regla del Rectángulo
--   Regla del Trapecio
--   Regla de Simpson 1/3
--   Regla de Simpson 3/8
+- Next.js (App Router), React, Tailwind, componentes tipo shadcn/ui, p5.js (CDN), `expr-eval`.
 
-## Stack Técnico
+## Desarrollo
 
--   **Framework:** [Next.js](https://nextjs.org/) (App Router)
--   **Lenguaje:** JavaScript
--   **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
--   **UI Components:** [ShadCN UI](https://ui.shadcn.com/)
--   **Visualización:** [p5.js](https://p5js.org/)
+```bash
+npm install
+npm run dev
+```
 
-## Cómo Empezar
+Abre [http://localhost:9002](http://localhost:9002).
 
-Para ejecutar este proyecto localmente, sigue estos pasos:
+## Comprobaciones
 
-1.  **Clona el repositorio:**
-    ```bash
-    git clone https://github.com/tu-usuario/nombre-del-repositorio.git
-    cd nombre-del-repositorio
-    ```
+```bash
+npm run typecheck
+npm run build
+```
 
-2.  **Instala las dependencias:**
-    ```bash
-    npm install
-    ```
+## Despliegue estático
 
-3.  **Inicia el servidor de desarrollo:**
-    ```bash
-    npm run dev
-    ```
-
-Abre [http://localhost:9002](http://localhost:9002) en tu navegador para ver la aplicación.
-
-¡Feliz cacería de bugs!
+El proyecto exporta sitio estático (`output: 'export'`). En producción usa `basePath` `/Ilusion_Integrales` según `next.config.ts`.
