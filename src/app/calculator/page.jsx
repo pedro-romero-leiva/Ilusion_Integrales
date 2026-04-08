@@ -36,6 +36,7 @@ export default function Calculator() {
 
   const p5Instance = useRef();
   const sketchRef = useRef();
+  const animatingRef = useRef(false);
 
   useEffect(() => {
     const savedMethod = localStorage.getItem('selected_method');
@@ -75,6 +76,8 @@ export default function Calculator() {
   };
 
   const calculateIntegral = () => {
+    setAnimating(false);
+    animatingRef.current = false;
     setError("");
     setRes(null);
     setRelativeError(null);
@@ -191,12 +194,19 @@ export default function Calculator() {
       drawAxes();
       drawFunction();
 
-      if (animating && current_step < N) {
-        // CORRECCIÓN: sin saltos aleatorios, avance progresivo limpio
+      if (animatingRef.current) {
+        // Animando: dibuja hasta el paso actual
         for (let i = 0; i < current_step; i++) drawIntegrationStep(i);
-        if (p.frameCount % Math.max(1, Math.floor(speed / 10)) === 0) current_step++;
+        if (current_step < N) {
+          if (p.frameCount % Math.max(1, Math.floor(speed / 10)) === 0) current_step++;
+        } else {
+          // Terminó la animación, pausar automáticamente
+          animatingRef.current = false;
+          setAnimating(false);
+        }
       } else {
-        for (let i = 0; i < N; i++) drawIntegrationStep(i);
+        // Pausado o terminado: dibuja hasta donde llegó
+        for (let i = 0; i < current_step; i++) drawIntegrationStep(i);
       }
     };
 
@@ -361,8 +371,8 @@ export default function Calculator() {
             <Card className="bg-white/5 backdrop-blur-sm border-white/10">
               <CardContent className="p-4 flex items-center justify-between gap-6">
                 <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => setAnimating(true)} disabled={animating}><Play className="text-accent hover:text-accent/80" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setAnimating(false)} disabled={!animating}><Pause className="text-muted-foreground hover:text-white" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => { setAnimating(true); animatingRef.current = true; }} disabled={animating}><Play className="text-accent hover:text-accent/80" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => { setAnimating(false); animatingRef.current = false; }} disabled={!animating}><Pause className="text-muted-foreground hover:text-white" /></Button>
                   <Button variant="ghost" size="icon" onClick={calculateIntegral}><RefreshCw className="text-muted-foreground hover:text-white" /></Button>
                 </div>
                 <div className="flex-1 flex items-center gap-3">
